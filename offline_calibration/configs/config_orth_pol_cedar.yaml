@@ -1,0 +1,48 @@
+point_source:
+    correlator: 'chime'
+    output_dir: '/scratch/ssiegel/chime/gains/orth_pol'
+    output_suffix: 'gain'
+    max_file_size: 3000000000
+    max_num_time:
+    acq_dir: '/project/rpp-krs/chime/chime_online/'
+    acq_suffix: 'cal_corr'
+    start_time:
+    min_csd: 1000
+    max_csd: 2000 
+    inputmap: '/scratch/ssiegel/chime/inputs/correlator_inputs.pickle'
+    min_dec: 10.0
+    min_flux: 2000.0
+    freq_nominal: 600.0
+    source_list: ['CYG_A']
+    process_daytime: 1
+    nsigma_source: 2.0
+    apply_timing: True
+    timing_window: 43200.0
+    analysis:
+        verbose: False
+        return_response: False
+        neigen: 2
+        eigen_reference: 0
+        nfreq_per_block: 64
+        phase_reference_index: [1152, 1408] # Feed to use as reference for pol ['Y', 'X']
+        med_phase_ref: False
+        dyn_rng_threshold: 3.0
+        nsigma1: 0.600
+        nsigma2: 0.300
+        evaluate_gain_at: 'transit'
+        multi_sample: True
+        interpolation_length_scale: 30.0
+        chisq_per_dof_threshold: 1000.0
+        nsigma_outlier:  10.0
+        nsigma_outlier_der2: 0.0
+        min_amp_scale_factor: 0.05
+        max_amp_scale_factor: 20.0
+        threshold_good_input: 0.70
+        threshold_good_freq:  0.70
+        fit:
+            poly_deg_amp: 5
+            poly_deg_phi: 5
+            niter: 3
+            alpha: 0.32
+            poly_type: 'standard'
+            use_polyfit: False
