@@ -34,7 +34,8 @@ point_source:
         interpolation_length_scale: 30.0
         chisq_per_dof_threshold: 1000.0
         nsigma_outlier:  10.0
-        nsigma_outlier_der2: 0
+        nsigma_med_outlier: 10.0
+        window_med_outlier: 24
         min_amp_scale_factor: 0.05
         max_amp_scale_factor: 20.0
         threshold_good_input: 0.70

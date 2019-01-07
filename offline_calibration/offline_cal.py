@@ -10,7 +10,6 @@ import numpy as np
 import h5py
 
 import scipy.constants
-import scipy.interpolate
 
 from sklearn import gaussian_process
 from sklearn.gaussian_process.kernels import Matern, ConstantKernel
@@ -509,27 +508,16 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
                     med_amp_by_pol[ff] = med
                     sig_amp_by_pol[ff] = 0.5 * (shigh - slow) / np.sqrt(np.sum(this_flag, dtype=np.float32))
 
-            # Flag frequencies with large jump in median amplitude
-            if config.nsigma_outlier_der2 > 0:
 
-                ind_fit = np.flatnonzero(med_amp_by_pol > 0.0)[::-1]
+            if config.nsigma_med_outlier:
 
-                if ind_fit.size > (0.30 * nfreq):
+                med_flag = med_amp_by_pol > 0.0
 
-                    interp_param = scipy.interpolate.splrep(freq[ind_fit], med_amp_by_pol[ind_fit],
-                                                            w=tools.invert_no_zero(sig_amp_by_pol[ind_fit]),
-                                                            k=3, s=3*ind_fit.size)
+                not_outlier = flag_outliers(med_amp_by_pol, med_flag, window=config.window_med_outlier,
+                                                                      nsigma=config.nsigma_med_outlier)
+                flag[:, feeds] &= not_outlier[:, np.newaxis]
 
-                    spline = scipy.interpolate.BSpline(*interp_param, extrapolate=True)
-                    der2 = spline(freq[ind_fit], nu=2)
-                    der2 = np.abs(der2 - np.median(der2))
-                    sig_der2 = 1.48625 * np.median(der2)
-                    flag_der2 = der2 < (config.nsigma_outlier_der2 * sig_der2)
-                    for dff, ff in enumerate(ind_fit):
-                        flag[ff, feeds] &= flag_der2[dff]
-
-                    mlog.info("%d Pol %s frequencies have outlier second derivative." % 
-                             (np.sum(~flag_der2, dtype=np.int), polstr[pp]))
+                mlog.info("Pol %s:  %d frequencies are outliers." % (polstr[pp], np.sum(~not_outlier & med_flag, dtype=np.int)))
 
         # Determine bad frequencies
         flag_freq = (np.sum(flag, axis=1, dtype=np.float32) / float(ninput)) > config.threshold_good_freq
@@ -611,6 +599,55 @@ def interpolate_gain(freq, gain, weight, flag=None, length_scale=30.0, mlog=None
 
     return interp_gain, interp_weight
 
+
+def sliding_window(arr, window):
+
+    # Advanced numpy tricks
+    shape = arr.shape[:-1] + (arr.shape[-1]-window+1, window)
+    strides = arr.strides + (arr.strides[-1],)
+    return np.lib.stride_tricks.as_strided(arr, shape=shape, strides=strides)
+
+
+def flag_outliers(raw, flag, window=25, nsigma=5.0):
+
+    # Make sure we have an even window size
+    if window % 2:
+        window += 1
+
+    hwidth = window // 2 - 1
+
+    nraw = raw.size
+    dtype = raw.dtype
+
+    # Replace flagged samples with nan
+    good = np.flatnonzero(flag)
+
+    data = np.full((nraw,), np.nan, dtype=dtype)
+    data[good] = raw[good]
+
+    # Expand the edges
+    expanded_data = np.concatenate((np.full((hwidth,), np.nan, dtype=dtype),
+                                    data,
+                                    np.full((hwidth+1,), np.nan, dtype=dtype)))
+
+    # Apply median filter
+    smooth = np.nanmedian(sliding_window(expanded_data, window), axis=-1)
+
+    # Calculate RMS of residual
+    resid = np.abs(data - smooth)
+
+    rwidth = 9 * window
+    hrwidth = rwidth // 2 - 1
+
+    expanded_resid = np.concatenate((np.full((hrwidth,), np.nan, dtype=dtype),
+                                    resid,
+                                    np.full((hrwidth+1,), np.nan, dtype=dtype)))
+
+    sig = 1.4826 * np.nanmedian(sliding_window(expanded_resid, rwidth), axis=-1)
+
+    not_outlier = resid < (nsigma * sig)
+
+    return not_outlier
 
 ###################################################
 # command line interface
