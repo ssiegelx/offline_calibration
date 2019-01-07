@@ -162,6 +162,8 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
     if inputmap is None:
         inputmap = tools.get_correlator_inputs(datetime.datetime.utcfromtimestamp(data.time[itrans]), correlator='chime')
 
+    tools.change_chime_location(rotation=config.telescope_rotation)
+
     input_axis = np.array([(inp.id, inp.input_sn) for inp in inputmap],
                           dtype=[('chan_id', 'u2'), ('correlator_input', 'S32')])
 
@@ -185,6 +187,15 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
 
     dyn = data['eval'][:, 1, :] * tools.invert_no_zero(eval0_off_source[:, np.newaxis])
 
+    # Determine frequencies to mask
+    not_rfi = np.ones((nfreq, 1), dtype=np.bool)
+    if config.mask_rfi is not None:
+        for frng in config.mask_rfi:
+            not_rfi[:, 0] &= ((freq < frng[0]) | (freq > frng[1]))
+
+    mlog.info("%0.1f percent of frequencies available after masking RFI." %
+             (100.0 * np.sum(not_rfi, dtype=np.float32) / float(nfreq),))
+
     #dyn_flg = utils.contiguous_flag(dyn > config.dyn_rng_threshold, centre=itrans)
     dyn_flg = dyn > config.dyn_rng_threshold
 
@@ -196,7 +207,7 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
                   (pp, ','.join(["%d" % xx for xx in np.percentile(np.sum(dyn_flg, axis=-1), [25, 50, 75, 100])])))
 
         if config.nsigma1 is None:
-            fit_flag[:, pp, :] = dyn_flg
+            fit_flag[:, pp, :] = dyn_flg & not_rfi
 
         else:
 
@@ -204,7 +215,7 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
 
             win_flg = np.abs(ha)[np.newaxis, :] <= fit_window[:, np.newaxis]
 
-            fit_flag[:, pp, :] = (dyn_flg & win_flg)
+            fit_flag[:, pp, :] = (dyn_flg & win_flg & not_rfi)
 
     # Calculate base error
     base_err =  data['erms'][:, np.newaxis, :]
@@ -593,6 +604,11 @@ def interpolate_gain(freq, gain, weight, flag=None, length_scale=30.0, mlog=None
 
             interp_gain[test, ii] = (ypred[:, 0] + ytrain_mu[:, 0]) + 1.0J * (ypred[:, 1] + ytrain_mu[:, 1])
             interp_weight[test, ii] = tools.invert_no_zero(err_ypred**2)
+
+        else:
+            # No valid data
+            interp_gain[:, ii] = 0.0 + 0.0J
+            interp_weight[:, ii] = 0.0
 
     if mlog is not None:
         mlog.info("Done.  Interpolation took %0.1f minutes." % ((time.time() - t0) / 60.0, ))

@@ -19,6 +19,7 @@ point_source:
     apply_timing: True
     timing_window: 43200.0
     analysis:
+        telescope_rotation: -0.088
         verbose: False
         return_response: False
         neigen: 2
@@ -40,6 +41,20 @@ point_source:
         max_amp_scale_factor: 20.0
         threshold_good_input: 0.70
         threshold_good_freq:  0.70
+        mask_rfi:
+            - [449.41, 450.98]
+            - [454.88, 456.05]
+            - [457.62, 459.18]
+            - [483.01, 485.35]
+            - [487.70, 494.34]
+            - [497.85, 506.05]
+            - [529.10, 536.52]
+            - [541.60, 554.49]
+            - [564.65, 585.35]
+            - [693.16, 693.55]
+            - [694.34, 696.68]
+            - [729.88, 745.12]
+            - [746.29, 756.45]
         fit:
             poly_deg_amp: 5
             poly_deg_phi: 5
@@ -47,3 +62,4 @@ point_source:
             alpha: 0.32
             poly_type: 'standard'
             use_polyfit: False
+            absolute_sigma: False
