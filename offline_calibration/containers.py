@@ -198,10 +198,11 @@ class PointSourceWriter(Hdf5Writer):
 
 class TransitTrackerOffline(object):
 
-    def __init__(self, nsigma=3.0):
+    def __init__(self, nsigma=3.0, extend_night=1800.0):
 
         self._entries = {}
         self._nsigma = nsigma
+        self._extend_night = extend_night
 
     def add_file(self, filename):
 
@@ -303,7 +304,10 @@ class TransitTrackerOffline(object):
 
             ss = ephemeris.solar_setting(rr)[0]
 
-            if ((transit_start <= ss) and (rr <= transit_end)):
+            rrex = rr + self._extend_night
+            ssex = ss - self._extend_night
+
+            if ((transit_start <= ssex) and (rrex <= transit_end)):
 
                 is_daytime += 1
 

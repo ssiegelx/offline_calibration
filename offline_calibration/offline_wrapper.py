@@ -74,7 +74,7 @@ def main(config_file=None, logging_params=DEFAULT_LOGGING):
     cal_list.sort(key=lambda name: FluxCatalog[name].predict_flux(config.freq_nominal))
 
     # Add to transit tracker
-    transit_tracker = containers.TransitTrackerOffline(nsigma=config.nsigma_source)
+    transit_tracker = containers.TransitTrackerOffline(nsigma=config.nsigma_source, extend_night=config.extend_night)
     for name in cal_list:
         transit_tracker[name] = FluxCatalog[name].skyfield
 

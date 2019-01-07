@@ -16,6 +16,7 @@ point_source:
     source_list: ['CYG_A', 'TAU_A']
     process_daytime: 1
     nsigma_source: 2.0
+    extend_night: 1800.0
     apply_timing: True
     timing_window: 43200.0
     analysis:
@@ -27,7 +28,12 @@ point_source:
         nfreq_per_block: 64
         phase_reference_index: [1152, 1408] # Feed to use as reference for pol ['Y', 'X']
         med_phase_ref: False
-        dyn_rng_threshold: 3.0
+        dyn_rng_threshold:
+            default: 3.0
+            CYG_A: 10.0
+            CAS_A: 10.0
+            TAU_A: 3.0
+            VIR_A: 2.0
         nsigma1: 0.600
         nsigma2: 0.300
         evaluate_gain_at: 'transit'

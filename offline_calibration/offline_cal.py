@@ -197,7 +197,14 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
              (100.0 * np.sum(not_rfi, dtype=np.float32) / float(nfreq),))
 
     #dyn_flg = utils.contiguous_flag(dyn > config.dyn_rng_threshold, centre=itrans)
-    dyn_flg = dyn > config.dyn_rng_threshold
+    if source in config.dyn_rng_threshold:
+        dyn_rng_threshold = config.dyn_rng_threshold[source]
+    else:
+        dyn_rng_threshold = config.dyn_rng_threshold.default
+
+    mlog.info("Dynamic range threshold set to %0.1f." % dyn_rng_threshold)
+
+    dyn_flg = dyn > dyn_rng_threshold
 
     # Calculate fit flag
     fit_flag = np.zeros((nfreq, npol, ntime), dtype=np.bool)
