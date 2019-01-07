@@ -156,16 +156,17 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
     eps = 10.0 * np.finfo(tmp_data['evec'].dtype).eps
     bad_input = np.flatnonzero(np.all(np.abs(tmp_data['evec'][:, 0]) < eps,  axis=(0, 2)))
 
+    input_axis = tmp_data.input.copy()
+
     del tmp_data
 
     # Query layout database for correlator inputs
     if inputmap is None:
         inputmap = tools.get_correlator_inputs(datetime.datetime.utcfromtimestamp(data.time[itrans]), correlator='chime')
 
-    tools.change_chime_location(rotation=config.telescope_rotation)
+    inputmap = tools.reorder_correlator_inputs(input_axis, inputmap)
 
-    input_axis = np.array([(inp.id, inp.input_sn) for inp in inputmap],
-                          dtype=[('chan_id', 'u2'), ('correlator_input', 'S32')])
+    tools.change_chime_location(rotation=config.telescope_rotation)
 
     # Determine x and y pol index
     xfeeds = np.array([idf for idf, inp in enumerate(inputmap) if (idf not in bad_input) and tools.is_array_x(inp)])
