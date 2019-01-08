@@ -49,7 +49,7 @@ DEFAULT_LOGGING = {
 ###################################################
 
 def main(config_file=None, logging_params=DEFAULT_LOGGING):
-    
+
     # Setup logging
     log.setup_logging(logging_params)
     mlog = log.get_logger(__name__)
@@ -61,7 +61,7 @@ def main(config_file=None, logging_params=DEFAULT_LOGGING):
 
     # Create transit tracker
     source_list = FluxCatalog.sort() if not config.source_list else config.source_list
-    
+
     cal_list = [name for name, obj in FluxCatalog.iteritems()
                 if (obj.dec >= config.min_dec) and
                 (obj.predict_flux(config.freq_nominal) >= config.min_flux) and
@@ -133,22 +133,47 @@ def main(config_file=None, logging_params=DEFAULT_LOGGING):
                 with open(config.inputmap, 'r') as handler:
                     inputmap = pickle.load(handler)
 
+
         # Grab the timing correction for this transit
         tcorr = None
         if config.apply_timing:
-            try:
-                tcorr = timing.load_timing_correction(files, start=start, stop=stop,
-                                                      window=config.timing_window,
-                                                      instrument=config.correlator)
-                mlog.info(str(tcorr))
-            except Exception as e:
-                mlog.error('timing.load_timing_correction failed with error: %s' % e)
-                mlog.warning('No timing correction applied to %s transit on CSD %d.' % (src, csd))
+
+            if config.timing_glob is not None:
+
+                mlog.info("Loading timing correction from extended timing solutions.")
+
+                timing_files = sorted(glob.glob(config.timing_glob))
+
+                if timing_files:
+
+                    try:
+                        tcorr = search_extended_timing_solutions(timing_files, ephemeris.csd_to_unix(csd))
+
+                    except Exception as e:
+                        mlog.error('search_extended_timing_solutions failed with error: %s' % e)
+
+                    else:
+                        mlog.info(str(tcorr))
+
+            if tcorr is None:
+
+                mlog.info("Loading timing correction from chimetiming acquisitions.")
+
+                try:
+                    tcorr = timing.load_timing_correction(files, start=start, stop=stop,
+                                                          window=config.timing_window,
+                                                          instrument=config.correlator)
+                except Exception as e:
+                    mlog.error('timing.load_timing_correction failed with error: %s' % e)
+                    mlog.warning('No timing correction applied to %s transit on CSD %d.' % (src, csd))
+                else:
+                    mlog.info(str(tcorr))
+
 
         # Call the main routine to process data
         try:
             outdct = offline_cal.offline_point_source_calibration(files, src, start=start, stop=stop, inputmap=inputmap,
-                                                              tcorr=tcorr, logging_params=logging_params, 
+                                                              tcorr=tcorr, logging_params=logging_params,
                                                               **config.analysis.as_dict())
 
         except Exception as e:
@@ -227,6 +252,41 @@ def find_files(config, psrc=None):
                  output_files.append(cf)
 
     return output_files or None
+
+
+def search_extended_timing_solutions(timing_files, timestamp):
+
+    # Load the timing correction
+    nfiles = len(timing_files)
+    tstart = np.zeros(nfiles, dtype=np.float32)
+    tstop  = np.zeros(nfiles, dtype=np.float32)
+    all_tcorr = []
+
+    for ff, filename in enumerate(timing_files):
+
+        kwargs = {}
+        with h5py.File(filename, 'r') as handler:
+
+            for key in ['tau', 'avg_phase', 'noise_source', 'time']:
+
+                kwargs[key] = handler[key][:]
+
+        tcorr = timing.TimingCorrection(**kwargs)
+
+        all_tcorr.append( tcorr )
+        tstart[ff] = tcorr.time[0]
+        tstop[ff]  = tcorr.time[-1]
+
+    # Map timestamp to a timing correction object
+    imatch = np.flatnonzero((timestamp >= tstart) & (timestamp <= tstop))
+
+    if imatch.size > 1:
+        ValueError("Timing corrections overlap!")
+    elif imatch.size < 1:
+        ValueError("No timing correction for transit on %s (CSD %d)" %
+                  (ephemeris.unix_to_datetime(timestamp).strftime("%Y-%m-%d"),  ephemeris.unix_to_csd(timestamp)))
+
+    return all_tcorr[imatch[0]]
 
 
 ###################################################

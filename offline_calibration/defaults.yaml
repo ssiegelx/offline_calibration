@@ -18,6 +18,7 @@ point_source:
     nsigma_source: 2.0
     extend_night: 1800.0
     apply_timing: True
+    timing_glob: '/mnt/gong/ssiegel/timing/extended_solutions/timing_correction_2018*.h5'
     timing_window: 43200.0
     analysis:
         telescope_rotation: -0.088
