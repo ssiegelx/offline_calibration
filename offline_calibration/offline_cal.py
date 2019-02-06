@@ -278,6 +278,8 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
         results['ndof'] = np.zeros((nfreq, ninput, ndir), dtype=np.float32)
         results['chisq'] = np.zeros((nfreq, ninput, ndir), dtype=np.float32)
 
+        results['timing'] = np.zeros((nfreq, ninput), dtype=np.complex64)
+
     # Initialize metric like variables
     results['runtime'] = np.zeros((nblock_freq, 2), dtype=np.float64)
 
@@ -341,7 +343,9 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
             if tcorr is not None:
                 tgain = tcorr.get_gain(nudata.freq, nudata.input[feeds], nudata.time)
                 tgain *= tgain[:, phase_ref_by_pol[pp], np.newaxis, :].conj()
-                tgain *= tgain[:, :, itrans, np.newaxis].conj()
+
+                tgain_transit = tgain[:, :, itrans].copy()
+                tgain *= tgain_transit[:, :, np.newaxis].conj()
 
             # Create the polarization masking vector
             P = np.zeros((1, ninput, 1), dtype=np.float64)
@@ -387,6 +391,8 @@ def offline_point_source_calibration(file_list, source, inputmap=None, start=Non
                 # Apply timing correction
                 if tcorr is not None:
                     resp *= tgain[gff]
+
+                    results['timing'][ff, feeds] = tgain_transit[gff]
 
                 # Fringestop
                 lmbda = scipy.constants.c * 1e-6 / nudata.freq[gff]

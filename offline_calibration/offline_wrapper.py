@@ -216,7 +216,7 @@ def main(config_file=None, logging_params=DEFAULT_LOGGING):
         containers.mkdir(dump_dir)
 
         dump_file = os.path.join(dump_dir, '%s_csd_%d.h5' % (src.lower(), csd))
-        h5_psrc_fit[src].dump(dump_file, datasets=['csd', 'acquisition', 'is_daytime', 'gain', 'weight', 'model'])
+        h5_psrc_fit[src].dump(dump_file, datasets=['csd', 'acquisition', 'is_daytime', 'gain', 'weight', 'timing', 'model'])
 
         mlog.info('Finished analysis of %s transit on CSD %d.' % (src, csd))
 

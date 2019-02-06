@@ -88,6 +88,11 @@ class PointSourceWriter(Hdf5Writer):
             'dtype': np.float32,
             'metric': False,
         },
+        'timing': {
+            'axes': ['time', 'freq', 'input'],
+            'dtype': np.complex64,
+            'metric': False,
+        },
         'model': {
             'axes': ['time', ],
             'dtype': h5py.special_dtype(vlen=bytes),
