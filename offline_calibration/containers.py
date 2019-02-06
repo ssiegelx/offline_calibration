@@ -45,7 +45,7 @@ class PointSourceWriter(Hdf5Writer):
     _dataset_spec = {
         'csd': {
             'axes': ['time', ],
-            'dtype': h5py.special_dtype(vlen=bytes),
+            'dtype': np.int,
             'metric': False,
         },
         'acquisition': {
@@ -194,6 +194,29 @@ class PointSourceWriter(Hdf5Writer):
         output_file = os.path.join(output_dir, "%08d.h5" % seconds_elapsed)
 
         return output_file
+
+
+    def change_file(self, smp, **kwargs):
+        """ Change the output acquisition if the underlying chimecal
+        acquisition changes.
+
+        Parameters
+        ----------
+        smp: unix time
+            Time at which the datasets in kwargs were collected.
+
+        acquisition: str
+            Datetime string {YYYYMMDD}T{HHMMSS}Z for the acquisition
+            that was used to derive the datasets.
+        """
+
+        acq = kwargs.get('acquisition', None)
+        current_acq = self.attrs.get('acquisition_name', None)
+
+        change_file = ((acq is not None) and (current_acq is not None) and
+                       (acq[0:16] != current_acq[0:16]))
+
+        return change_file
 
 
 class TransitTrackerOffline(object):

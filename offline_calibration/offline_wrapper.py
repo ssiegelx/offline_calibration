@@ -202,7 +202,7 @@ def main(config_file=None, logging_params=DEFAULT_LOGGING):
         # Associate this gain calibration to the transit time
         this_time = ephemeris.transit_times(FluxCatalog[src].skyfield, ephemeris.csd_to_unix(csd))[0]
 
-        outdct['csd'] = '%04d' % csd
+        outdct['csd'] = csd
         outdct['is_daytime'] = is_day
         outdct['acquisition'] = os.path.basename(os.path.dirname(files[0]))
 
